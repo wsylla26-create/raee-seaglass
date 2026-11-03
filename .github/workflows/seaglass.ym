@@ -1,0 +1,83 @@
+name: SeaGlass
+
+# 1) Upload seaglass-code.zip to the repo: this unpacks it into the right folders.
+# 2) Every push builds a test APK  -> download "RAEE-SeaGlass-test-apk" from the run.
+# 3) Actions > SeaGlass > Run workflow > tick "release" -> signed .aab for Google Play
+#    (needs secrets UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD, UPLOAD_KEY_ALIAS, UPLOAD_KEY_PASSWORD).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Also build the signed Google Play bundle'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack uploaded code zip
+        id: unpack
+        run: |
+          if [ -f seaglass-code.zip ]; then
+            unzip -o seaglass-code.zip -d .
+            git rm -q seaglass-code.zip
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git add -A
+            git commit -m "Unpack SeaGlass code"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+          if [ -f app/build.gradle ]; then echo "code=yes" >> "$GITHUB_OUTPUT"; else echo "No app code yet: upload seaglass-code.zip"; fi
+
+      - uses: actions/setup-java@v4
+        if: steps.unpack.outputs.code == 'yes'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.unpack.outputs.code == 'yes'
+        with:
+          gradle-version: '8.9'
+
+      - name: Build test APK
+        if: steps.unpack.outputs.code == 'yes'
+        env:
+          AI_ENDPOINT: ${{ secrets.AI_ENDPOINT }}
+          AI_APP_KEY: ${{ secrets.AI_APP_KEY }}
+        run: gradle --no-daemon :app:assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        if: steps.unpack.outputs.code == 'yes'
+        with:
+          name: RAEE-SeaGlass-test-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Build signed Google Play bundle
+        if: ${{ inputs.release && steps.unpack.outputs.code == 'yes' }}
+        env:
+          AI_ENDPOINT: ${{ secrets.AI_ENDPOINT }}
+          AI_APP_KEY: ${{ secrets.AI_APP_KEY }}
+        run: |
+          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          gradle --no-daemon :app:bundleRelease \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.UPLOAD_STORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.UPLOAD_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.UPLOAD_KEY_PASSWORD }}"
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.release && steps.unpack.outputs.code == 'yes' }}
+        with:
+          name: RAEE-SeaGlass-for-Google-Play
+          path: app/build/outputs/bundle/release/*.aab

@@ -971,7 +971,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
     private void showMenu() {
         String adSub;
         List<Row> rows = new ArrayList<>();
-        rows.add(new Row("RAEE SeaGlass Plus", this.billing.planSummary(), new Runnable() {
+        rows.add(new Row(Billing.PLUS_ENABLED ? "RAEE SeaGlass Plus" : "Your plan", this.billing.planSummary(), new Runnable() {
             @Override
             public final void run() {
                 MainActivity.this.lambda$showMenu$27();
@@ -1601,7 +1601,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
 
     @Override
     public void ask(final String question) {
-        if (!AiClient.isReady()) {
+        if (!AiClient.isReady() || !Billing.PLUS_ENABLED) {
             openUrl(CommandRouter.searchUrl(question));
             tell("Here are results for " + question + ".");
         } else if (!this.billing.hasPlus()) {
@@ -1675,7 +1675,9 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
                 }
             }, null, true, true));
         }
-        if (this.billing.hasPlus()) {
+        if (!Billing.PLUS_ENABLED && !this.billing.hasPlus()) {
+            // Plus is hidden in version 1: only the one-time unlock is offered.
+        } else if (this.billing.hasPlus()) {
             rows.add(new Row("SeaGlass Plus is active ✓", "Tap to manage or cancel your subscription in Google Play.", new Runnable() {
                 @Override
                 public final void run() {

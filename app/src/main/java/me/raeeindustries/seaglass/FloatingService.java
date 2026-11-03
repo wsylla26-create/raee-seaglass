@@ -614,7 +614,7 @@ public class FloatingService extends Service implements VoiceEngine.Listener, Co
 
     @Override
     public void ask(final String question) {
-        if (!AiClient.isReady()) {
+        if (!AiClient.isReady() || !Billing.PLUS_ENABLED) {
             openUrl(CommandRouter.searchUrl(question));
             tell("Here are results for " + question + ".");
             return;

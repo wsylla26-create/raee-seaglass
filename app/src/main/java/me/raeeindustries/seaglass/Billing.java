@@ -27,6 +27,8 @@ import java.util.List;
 final class Billing implements PurchasesUpdatedListener {
     private static final long DAY_MS = 86400000;
     static final String PLUS = "seaglass_plus";
+    /** SeaGlass Plus (AI answers subscription) is hidden in version 1. Set to true once an AI server is connected. */
+    static final boolean PLUS_ENABLED = false;
     static final int TRIAL_DAYS = 7;
     static final String UNLOCK = "seaglass_unlock";
     private static Billing instance;
@@ -106,7 +108,7 @@ final class Billing implements PurchasesUpdatedListener {
             return "SeaGlass Plus is active";
         }
         if (ownsUnlock()) {
-            return "Unlocked · Plus adds AI answers";
+            return PLUS_ENABLED ? "Unlocked · Plus adds AI answers" : "Full app unlocked · Thank you!";
         }
         if (inTrial()) {
             int d = trialDaysLeft();

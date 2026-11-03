@@ -1,6 +1,5 @@
 package me.raeeindustries.seaglass;
 
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -140,8 +139,20 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
     private boolean barHidden;
     private boolean pullMenuOpen;
     private long ignoreScrollUntil;
-    private ValueAnimator tealFade;
-    private static final int[] TEAL_SHADES = {0xFF8FD9E1, 0xFF74CFDA, 0xFFA9E8DD, 0xFF8FD9E1};
+    private boolean tealFadeOn;
+    // Same three shades and 12-second loop as the start page (assets/home.html).
+    private static final int[] TEAL_SHADES = {0xFF8FD9E1, 0xFF86CBEC, 0xFF96E6C8};
+    private static final long TEAL_LOOP_MS = 12000L;
+    private final Runnable tealTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!MainActivity.this.tealFadeOn || Glass.midnight || MainActivity.this.root == null) {
+                return;
+            }
+            MainActivity.this.root.setBackgroundColor(tealColorNow());
+            MainActivity.this.handler.postDelayed(this, 50L);
+        }
+    };
     private FrameLayout webHolder;
     private static final AtomicInteger blockedSinceSave = new AtomicInteger();
     private static final int[] TEXT_SIZES = {80, 90, 100, 115, 130, 150, 175, 200};
@@ -261,10 +272,8 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
     }
 
     private void buildUi() {
-        if (this.tealFade != null) {
-            this.tealFade.cancel();
-            this.tealFade = null;
-        }
+        this.tealFadeOn = false;
+        this.handler.removeCallbacks(this.tealTick);
         this.root = new FrameLayout(this);
         this.root.setBackgroundColor(Glass.TEAL_BG);
         this.webHolder = new FrameLayout(this);
@@ -3541,8 +3550,9 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
     @Override
     protected void onResume() {
         super.onResume();
-        if (this.tealFade != null) {
-            this.tealFade.resume();
+        if (this.tealFadeOn) {
+            this.handler.removeCallbacks(this.tealTick);
+            this.handler.post(this.tealTick);
         }
         this.billing.refresh();
         if (this.current != null) {
@@ -3568,9 +3578,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
     @Override
     protected void onPause() {
         super.onPause();
-        if (this.tealFade != null) {
-            this.tealFade.pause();
-        }
+        this.handler.removeCallbacks(this.tealTick);
         this.voice.stopListening();
         if (this.current != null) {
             this.current.web.onPause();
@@ -3581,9 +3589,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
 
     @Override
     protected void onDestroy() {
-        if (this.tealFade != null) {
-            this.tealFade.cancel();
-        }
+        this.tealFadeOn = false;
         this.handler.removeCallbacksAndMessages(null);
         this.billing.removeListener(this);
         this.voice.destroy();
@@ -4073,28 +4079,32 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         return t;
     }
 
-    /** Slowly fades the glass background through three teal shades (Teal Glass look only). */
+    /**
+     * Fades the glass background through three teal shades on a 12-second loop (Teal Glass look only).
+     * Driven by a simple timer, so it keeps running even when the phone's animations are turned off.
+     */
     private void startTealFade() {
-        if (this.tealFade != null) {
-            this.tealFade.cancel();
-            this.tealFade = null;
-        }
+        this.handler.removeCallbacks(this.tealTick);
         if (Glass.midnight) {
+            this.tealFadeOn = false;
             this.root.setBackgroundColor(Glass.TEAL_BG);
             return;
         }
-        this.tealFade = ValueAnimator.ofArgb(TEAL_SHADES);
-        this.tealFade.setDuration(18000L);
-        this.tealFade.setRepeatCount(ValueAnimator.INFINITE);
-        this.tealFade.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator a) {
-                int c = (Integer) a.getAnimatedValue();
-                if (MainActivity.this.root != null && !Glass.midnight) {
-                    MainActivity.this.root.setBackgroundColor(c);
-                }
-            }
-        });
-        this.tealFade.start();
+        this.tealFadeOn = true;
+        this.handler.post(this.tealTick);
+    }
+
+    /** Smooth (ease-in-out) blend between the three shades for the current moment. */
+    private static int tealColorNow() {
+        float pos = (SystemClock.uptimeMillis() % TEAL_LOOP_MS) / (float) TEAL_LOOP_MS * TEAL_SHADES.length;
+        int i = (int) pos;
+        float f = pos - i;
+        f = f * f * (3.0f - 2.0f * f);
+        int a = TEAL_SHADES[i % TEAL_SHADES.length];
+        int b = TEAL_SHADES[(i + 1) % TEAL_SHADES.length];
+        int r = Math.round(((a >> 16) & 255) + (((b >> 16) & 255) - ((a >> 16) & 255)) * f);
+        int g = Math.round(((a >> 8) & 255) + (((b >> 8) & 255) - ((a >> 8) & 255)) * f);
+        int bl = Math.round((a & 255) + ((b & 255) - (a & 255)) * f);
+        return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 }

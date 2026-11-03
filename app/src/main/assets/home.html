@@ -20,12 +20,12 @@
    uses it (the page and the ring centre) fades together. */
 @property --teal{syntax:'<color>';inherits:true;initial-value:#8FD9E1}
 @keyframes seaglass-teal{
-  0%,100%{--teal:#8FD9E1}   /* light teal (original) */
-  33.333%{--teal:#74CFDA}   /* deeper sea teal */
-  66.667%{--teal:#A9E8DD}   /* pale seafoam teal */
+  0%,100%{--teal:#8FD9E1}   /* classic teal */
+  33.333%{--teal:#86CBEC}   /* blue teal */
+  66.667%{--teal:#96E6C8}   /* sea-green teal */
 }
 html:not(.mini){background:#8FD9E1}
-body:not(.midnight):not(.mini){animation:seaglass-teal 18s ease-in-out infinite;min-height:100vh}
+body:not(.midnight):not(.mini){animation:seaglass-teal 12s ease-in-out infinite;min-height:100vh}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--teal);color:var(--ink);font-family:Roboto,"Google Sans","Segoe UI",system-ui,sans-serif;padding:18px 16px 150px;-webkit-tap-highlight-color:transparent}

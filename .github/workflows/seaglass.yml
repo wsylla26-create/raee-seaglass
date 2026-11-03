@@ -1,7 +1,8 @@
 name: SeaGlass
 
 # 1) Upload seaglass-code.zip to the repo: this unpacks it into the right folders.
-# 2) Every push builds a test APK  -> download "RAEE-SeaGlass-test-apk" from the run.
+# 2) Every push builds a test APK  -> download "RAEE-SeaGlass-test-apk" from the run,
+#    and publishes it publicly as RAEE-SeaGlass.apk (Releases > android) for the QR code.
 # 3) Actions > SeaGlass > Run workflow > tick "release" -> signed .aab for Google Play
 #    (needs secrets UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD, UPLOAD_KEY_ALIAS, UPLOAD_KEY_PASSWORD).
 
@@ -61,6 +62,36 @@ jobs:
         with:
           name: RAEE-SeaGlass-test-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      # Public download for anyone (no GitHub sign-in): the QR code / raee-industries.me/seaglass points here.
+      # Signed with your upload key once the UPLOAD_* secrets are set, so people can update without reinstalling.
+      - name: Publish public download
+        if: steps.unpack.outputs.code == 'yes' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY_B64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          AI_ENDPOINT: ${{ secrets.AI_ENDPOINT }}
+          AI_APP_KEY: ${{ secrets.AI_APP_KEY }}
+        run: |
+          if [ -n "$KEY_B64" ]; then
+            echo "$KEY_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            gradle --no-daemon :app:assembleRelease \
+              -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.jks" \
+              -Pandroid.injected.signing.store.password="${{ secrets.UPLOAD_STORE_PASSWORD }}" \
+              -Pandroid.injected.signing.key.alias="${{ secrets.UPLOAD_KEY_ALIAS }}" \
+              -Pandroid.injected.signing.key.password="${{ secrets.UPLOAD_KEY_PASSWORD }}"
+            rm -f "$RUNNER_TEMP/upload.jks"
+            cp app/build/outputs/apk/release/*.apk RAEE-SeaGlass.apk
+          else
+            cp app/build/outputs/apk/debug/*.apk RAEE-SeaGlass.apk
+          fi
+          if gh release view android >/dev/null 2>&1; then
+            gh release upload android RAEE-SeaGlass.apk --clobber
+          else
+            gh release create android RAEE-SeaGlass.apk --target "$GITHUB_SHA" \
+              --title "RAEE SeaGlass for Android" \
+              --notes "Download RAEE-SeaGlass.apk, open it, and allow installing from your browser or Files app if Android asks. Made by RAEE Industries - raee-industries.me"
+          fi
 
       - name: Build signed Google Play bundle
         if: ${{ inputs.release && steps.unpack.outputs.code == 'yes' }}

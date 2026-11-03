@@ -14,7 +14,8 @@ import android.graphics.drawable.Drawable;
  */
 final class MenuIcon extends Drawable {
     static final int TABS = 1, NEW_TAB = 2, PRIVATE = 3, BOOKMARKS = 4, HISTORY = 5, DOWNLOAD = 6,
-            FIND = 7, SHARE = 8, ADD_HOME = 9, DESKTOP = 10, SETTINGS = 11, TRANSLATE = 12;
+            FIND = 7, SHARE = 8, ADD_HOME = 9, DESKTOP = 10, SETTINGS = 11, TRANSLATE = 12,
+            READ_ALOUD = 13;
 
     private final int type;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -124,6 +125,15 @@ final class MenuIcon extends Drawable {
                 path.lineTo(16.5f, 11);
                 path.lineTo(20, 20);
                 line(14.2f, 17, 18.8f, 17);
+                break;
+            case READ_ALOUD:
+                // speech bubble with sound waves
+                box(3, 4, 15, 14, 3);
+                path.moveTo(6, 14);
+                path.lineTo(6, 18.5f);
+                path.lineTo(10, 14);
+                path.addArc(new RectF(14, 6.5f, 19, 11.5f), -60, 120);
+                path.addArc(new RectF(14.5f, 3.5f, 22, 14.5f), -60, 120);
                 break;
             default:
                 break;

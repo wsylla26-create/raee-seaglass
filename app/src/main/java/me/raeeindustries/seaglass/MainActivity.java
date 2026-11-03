@@ -13,6 +13,8 @@ import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Insets;
 import android.graphics.PorterDuff;
+import android.graphics.RenderEffect;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -944,6 +946,9 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         this.upgradeOpen = false;
         if (this.pullMenuOpen) {
             this.pullMenuOpen = false;
+            if (Build.VERSION.SDK_INT >= 31) {
+                this.swipe.setRenderEffect(null);
+            }
             this.menuButton.setImageResource(R.drawable.ic_menu);
             this.menuButton.setColorFilter(Glass.INK, PorterDuff.Mode.SRC_IN);
             this.menuButton.setContentDescription("Menu");
@@ -3697,7 +3702,8 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         showBar();
         final boolean onWeb = onWebPage();
         this.sheet = new FrameLayout(this);
-        this.sheet.setBackgroundColor(Glass.SCRIM);
+        // Dim the page more than other sheets so the menu stands out.
+        this.sheet.setBackgroundColor(Glass.midnight ? 0x66000000 : 0x4006323B);
         this.sheet.setClickable(true);
         this.sheet.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -3707,8 +3713,10 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         });
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(1);
-        card.setBackground(Glass.panel(this, Glass.SHEET, 26.0f));
-        card.setElevation(dp(6.0f));
+        // Frosted glass: nearly solid, with the usual glass edge and sheen.
+        int frost = Glass.midnight ? 0xF20D2A40 : 0xF5EEFBFC;
+        card.setBackground(Glass.clearGlass(this, frost, 26.0f));
+        card.setElevation(dp(8.0f));
         card.setPadding(dp(12.0f), dp(12.0f), dp(12.0f), dp(10.0f));
         card.setClickable(true);
         Glass.glow(card);
@@ -3740,143 +3748,182 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
                 goHome();
             }
         }), navLp(true));
-        card.addView(nav, new LinearLayout.LayoutParams(-1, -2));
 
-        // Everything else, four to a row
-        List<View> tiles = new ArrayList<>();
-        int n = this.tabs.size();
-        tiles.add(tile(new MenuIcon(MenuIcon.TABS, Glass.INK), "Tabs · " + n, false, true, new Runnable() {
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(1);
+        body.addView(nav, new LinearLayout.LayoutParams(-1, -2));
+
+        // ---- This page (only on websites) ----
+        if (onWeb) {
+            List<View> page = new ArrayList<>();
+            boolean saved = this.library.isBookmarked(this.current.url);
+            page.add(tile(getDrawable(saved ? R.drawable.ic_star_filled : R.drawable.ic_star),
+                    saved ? "Bookmarked" : "Bookmark", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    bookmarkPage();
+                }
+            }));
+            page.add(tile(new MenuIcon(MenuIcon.READ_ALOUD, Glass.INK), "Read aloud", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    readPage();
+                }
+            }));
+            page.add(tile(getDrawable(R.drawable.ic_read), "Reader", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    openReader();
+                }
+            }));
+            page.add(tile(new MenuIcon(MenuIcon.FIND, Glass.INK), "Find", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    openFind(null);
+                }
+            }));
+            page.add(tile(new MenuIcon(MenuIcon.SHARE, Glass.INK), "Share", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    sharePage();
+                }
+            }));
+            page.add(tile(new MenuIcon(MenuIcon.TRANSLATE, Glass.INK), "Translate", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    showTranslate();
+                }
+            }));
+            boolean pinned = this.library.isShortcut(this.current.url);
+            page.add(tile(new MenuIcon(MenuIcon.ADD_HOME, Glass.INK), pinned ? "On home" : "Add to home", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    tool("shortcut", null);
+                }
+            }));
+            boolean desktop = this.current.desktop;
+            page.add(tile(new MenuIcon(MenuIcon.DESKTOP, Glass.INK), desktop ? "Mobile site" : "Desktop site", false, true, new Runnable() {
+                @Override
+                public void run() {
+                    setDesktop(!MainActivity.this.current.desktop);
+                }
+            }));
+            body.addView(sectionTitle("This page"));
+            body.addView(grid(page));
+        }
+
+        // ---- SeaGlass ----
+        List<View> app = new ArrayList<>();
+        app.add(tile(new MenuIcon(MenuIcon.TABS, Glass.INK), "Tabs · " + this.tabs.size(), false, true, new Runnable() {
             @Override
             public void run() {
                 showTabs();
             }
         }));
-        tiles.add(tile(new MenuIcon(MenuIcon.NEW_TAB, Glass.INK), "New tab", false, true, new Runnable() {
+        app.add(tile(new MenuIcon(MenuIcon.NEW_TAB, Glass.INK), "New tab", false, true, new Runnable() {
             @Override
             public void run() {
                 newTab(false);
             }
         }));
-        tiles.add(tile(new MenuIcon(MenuIcon.PRIVATE, Glass.INK), "Private tab", false, true, new Runnable() {
+        app.add(tile(new MenuIcon(MenuIcon.PRIVATE, Glass.INK), "Private tab", false, true, new Runnable() {
             @Override
             public void run() {
                 newTab(true);
             }
         }));
-        boolean saved = onWeb && this.library.isBookmarked(this.current.url);
-        tiles.add(tile(getDrawable(saved ? R.drawable.ic_star_filled : R.drawable.ic_star),
-                saved ? "Bookmarked" : "Bookmark page", false, onWeb, new Runnable() {
-            @Override
-            public void run() {
-                bookmarkPage();
-            }
-        }));
-        tiles.add(tile(new MenuIcon(MenuIcon.BOOKMARKS, Glass.INK), "Bookmarks", false, true, new Runnable() {
-            @Override
-            public void run() {
-                showBookmarks();
-            }
-        }));
-        tiles.add(tile(new MenuIcon(MenuIcon.HISTORY, Glass.INK), "History", false, true, new Runnable() {
-            @Override
-            public void run() {
-                showHistory();
-            }
-        }));
-        tiles.add(tile(new MenuIcon(MenuIcon.DOWNLOAD, Glass.INK), "Downloads", false, true, new Runnable() {
-            @Override
-            public void run() {
-                showDownloads();
-            }
-        }));
-        tiles.add(tile(getDrawable(R.drawable.ic_read), "Read aloud", false, onWeb, new Runnable() {
-            @Override
-            public void run() {
-                readPage();
-            }
-        }));
-        tiles.add(tile(new MenuIcon(MenuIcon.FIND, Glass.INK), "Find in page", false, onWeb, new Runnable() {
-            @Override
-            public void run() {
-                openFind(null);
-            }
-        }));
-        tiles.add(tile(new MenuIcon(MenuIcon.SHARE, Glass.INK), "Share", false, onWeb, new Runnable() {
-            @Override
-            public void run() {
-                sharePage();
-            }
-        }));
-        boolean pinned = onWeb && this.library.isShortcut(this.current.url);
-        tiles.add(tile(new MenuIcon(MenuIcon.ADD_HOME, Glass.INK), pinned ? "On home" : "Add to home", false, onWeb, new Runnable() {
-            @Override
-            public void run() {
-                tool("shortcut", null);
-            }
-        }));
-        boolean desktop = this.current != null && this.current.desktop;
-        tiles.add(tile(new MenuIcon(MenuIcon.DESKTOP, Glass.INK), desktop ? "Mobile site" : "Desktop site", false, onWeb, new Runnable() {
-            @Override
-            public void run() {
-                setDesktop(!MainActivity.this.current.desktop);
-            }
-        }));
-        tiles.add(tile(new MenuIcon(MenuIcon.TRANSLATE, Glass.INK), "Translate", false, onWeb, new Runnable() {
-            @Override
-            public void run() {
-                showTranslate();
-            }
-        }));
-        tiles.add(tile(getDrawable(R.drawable.ic_float), "Floating bubble", true, true, new Runnable() {
+        app.add(tile(getDrawable(R.drawable.ic_float), "Bubble", true, true, new Runnable() {
             @Override
             public void run() {
                 startFloating();
             }
         }));
+        app.add(tile(new MenuIcon(MenuIcon.BOOKMARKS, Glass.INK), "Bookmarks", false, true, new Runnable() {
+            @Override
+            public void run() {
+                showBookmarks();
+            }
+        }));
+        app.add(tile(new MenuIcon(MenuIcon.HISTORY, Glass.INK), "History", false, true, new Runnable() {
+            @Override
+            public void run() {
+                showHistory();
+            }
+        }));
+        app.add(tile(new MenuIcon(MenuIcon.DOWNLOAD, Glass.INK), "Downloads", false, true, new Runnable() {
+            @Override
+            public void run() {
+                showDownloads();
+            }
+        }));
         boolean muted = this.voice.isMuted();
-        tiles.add(tile(getDrawable(muted ? R.drawable.ic_volume_off : R.drawable.ic_volume),
+        app.add(tile(getDrawable(muted ? R.drawable.ic_volume_off : R.drawable.ic_volume),
                 muted ? "Voice off" : "Voice on", false, true, new Runnable() {
             @Override
             public void run() {
                 toggleMute();
             }
         }));
-        tiles.add(tile(new MenuIcon(MenuIcon.SETTINGS, Glass.INK), "More & settings", false, true, new Runnable() {
+        body.addView(sectionTitle("SeaGlass"));
+        body.addView(grid(app));
+        if (!onWeb) {
+            TextView hint = new TextView(this);
+            hint.setText("Open a website to bookmark, share, translate or read it aloud.");
+            hint.setTextColor(Glass.INK_SOFT);
+            hint.setTextSize(13.0f);
+            hint.setGravity(17);
+            hint.setPadding(dp(8.0f), dp(12.0f), dp(8.0f), 0);
+            body.addView(hint);
+        }
+
+        // ---- More & settings (full width) ----
+        LinearLayout more = new LinearLayout(this);
+        more.setOrientation(0);
+        more.setGravity(16);
+        more.setBackground(Glass.panel(this, Glass.ROW, 16.0f));
+        more.setPadding(dp(14.0f), 0, dp(14.0f), 0);
+        more.setContentDescription("More and settings");
+        ImageView gear = new ImageView(this);
+        gear.setImageDrawable(new MenuIcon(MenuIcon.SETTINGS, Glass.INK));
+        more.addView(gear, new LinearLayout.LayoutParams(dp(22.0f), dp(22.0f)));
+        TextView moreText = new TextView(this);
+        moreText.setText("More & settings");
+        moreText.setTextColor(Glass.INK);
+        moreText.setTextSize(15.0f);
+        moreText.setTypeface(Typeface.DEFAULT_BOLD);
+        moreText.setPadding(dp(12.0f), 0, 0, 0);
+        more.addView(moreText, new LinearLayout.LayoutParams(0, -2, 1.0f));
+        TextView chevron = new TextView(this);
+        chevron.setText("›");
+        chevron.setTextColor(Glass.INK_SOFT);
+        chevron.setTextSize(24.0f);
+        more.addView(chevron);
+        more.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void run() {
+            public void onClick(View v) {
+                closeSheet();
                 showMenu();
             }
-        }));
-        LinearLayout grid = new LinearLayout(this);
-        grid.setOrientation(1);
-        LinearLayout line = null;
-        for (int i = 0; i < tiles.size(); i++) {
-            if (i % 4 == 0) {
-                line = new LinearLayout(this);
-                line.setOrientation(0);
-                LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(-1, -2);
-                llp.topMargin = dp(10.0f);
-                grid.addView(line, llp);
-            }
-            line.addView(tiles.get(i), new LinearLayout.LayoutParams(0, -2, 1.0f));
-        }
-        while (line != null && line.getChildCount() < 4) {
-            line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1.0f));
-        }
+        });
+        LinearLayout.LayoutParams moreLp = new LinearLayout.LayoutParams(-1, dp(50.0f));
+        moreLp.topMargin = dp(14.0f);
+        body.addView(more, moreLp);
+
         ScrollView scroll = new ScrollView(this) {
             @Override
             protected void onMeasure(int widthSpec, int heightSpec) {
-                int cap = (int) (MainActivity.this.root.getHeight() * 0.68f);
+                int cap = (int) (MainActivity.this.root.getHeight() * 0.72f);
                 if (cap > 0) {
                     heightSpec = View.MeasureSpec.makeMeasureSpec(cap, Integer.MIN_VALUE);
                 }
                 super.onMeasure(widthSpec, heightSpec);
             }
         };
-        scroll.addView(grid);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.addView(body);
         card.addView(scroll, new LinearLayout.LayoutParams(-1, -2));
 
-        // Grab handle: tap or swipe up to close
+        // Grab handle: swipe up on the menu to close it
         View handle = new View(this);
         GradientDrawable h = new GradientDrawable();
         h.setColor(Glass.INK_SOFT);
@@ -3910,11 +3957,46 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         card.setTranslationY(-dp(24.0f));
         card.setAlpha(0.0f);
         card.animate().translationY(0.0f).alpha(1.0f).setDuration(170L).start();
+        // Frost the page behind the menu (Android 12 and newer).
+        if (Build.VERSION.SDK_INT >= 31) {
+            this.swipe.setRenderEffect(RenderEffect.createBlurEffect(dp(14.0f), dp(14.0f), Shader.TileMode.CLAMP));
+        }
 
         this.pullMenuOpen = true;
         this.menuButton.setImageResource(R.drawable.ic_close);
         this.menuButton.setColorFilter(Glass.INK, PorterDuff.Mode.SRC_IN);
         this.menuButton.setContentDescription("Close menu");
+    }
+
+    private TextView sectionTitle(String text) {
+        TextView t = new TextView(this);
+        t.setText(text.toUpperCase(java.util.Locale.ROOT));
+        t.setTextColor(Glass.INK_SOFT);
+        t.setTextSize(12.0f);
+        t.setTypeface(Typeface.DEFAULT_BOLD);
+        t.setLetterSpacing(0.12f);
+        t.setPadding(dp(4.0f), dp(16.0f), 0, dp(2.0f));
+        return t;
+    }
+
+    private LinearLayout grid(List<View> tiles) {
+        LinearLayout grid = new LinearLayout(this);
+        grid.setOrientation(1);
+        LinearLayout line = null;
+        for (int i = 0; i < tiles.size(); i++) {
+            if (i % 4 == 0) {
+                line = new LinearLayout(this);
+                line.setOrientation(0);
+                LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(-1, -2);
+                llp.topMargin = dp(8.0f);
+                grid.addView(line, llp);
+            }
+            line.addView(tiles.get(i), new LinearLayout.LayoutParams(0, -2, 1.0f));
+        }
+        while (line != null && line.getChildCount() < 4) {
+            line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1.0f));
+        }
+        return grid;
     }
 
     private LinearLayout.LayoutParams navLp(boolean gap) {

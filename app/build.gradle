@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Optional AI answers server. Set AI_ENDPOINT / AI_APP_KEY as GitHub secrets (or gradle properties)
+// to turn on AI answers; leave them empty and SeaGlass falls back to search results.
+def aiEndpoint = (findProperty('AI_ENDPOINT') ?: System.getenv('AI_ENDPOINT') ?: '').toString()
+def aiAppKey = (findProperty('AI_APP_KEY') ?: System.getenv('AI_APP_KEY') ?: '').toString()
+
+// Every GitHub build gets a higher versionCode automatically, so Google Play always accepts the upload.
+def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '0').toInteger()
+
+android {
+    namespace 'me.raeeindustries.seaglass'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'me.raeeindustries.seaglass'
+        minSdk 26
+        targetSdk 35
+        versionCode 100 + runNumber
+        versionName "1.2"
+        buildConfigField 'String', 'AI_ENDPOINT', "\"${aiEndpoint}\""
+        buildConfigField 'String', 'AI_APP_KEY', "\"${aiAppKey}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'com.android.billingclient:billing:7.1.1'
+}

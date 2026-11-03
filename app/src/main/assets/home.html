@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAEE SeaGlass</title>
+<style>
+/* SeaGlass start page: solid light teal ground with see-through glass panels. */
+:root{
+  --teal:#8FD9E1;
+  --ink:#06323B;
+  --ink-soft:#24555F;
+  --accent:#0B8A99;
+  --glass:rgba(226,252,254,.12);
+  --glass-strong:rgba(255,255,255,.32);
+  --edge:rgba(255,255,255,.9);
+}
+/* Teal fade: the ground slowly fades through three shades of teal, on a loop.
+   --teal is registered as a color so it can animate, and everything that
+   uses it (the page and the ring centre) fades together. */
+@property --teal{syntax:'<color>';inherits:true;initial-value:#8FD9E1}
+@keyframes seaglass-teal{
+  0%,100%{--teal:#8FD9E1}   /* light teal (original) */
+  33.333%{--teal:#74CFDA}   /* deeper sea teal */
+  66.667%{--teal:#A9E8DD}   /* pale seafoam teal */
+}
+html:not(.mini){background:#8FD9E1}
+body:not(.midnight):not(.mini){animation:seaglass-teal 18s ease-in-out infinite;min-height:100vh}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--teal);color:var(--ink);font-family:Roboto,"Google Sans","Segoe UI",system-ui,sans-serif;padding:18px 16px 150px;-webkit-tap-highlight-color:transparent}
+body.mini{background:transparent;padding:12px 10px 16px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.clock{white-space:nowrap;font-size:clamp(44px,14vw,96px);font-weight:800;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.mini .clock{font-size:46px}
+.brand{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;margin-bottom:14px}
+.brand b{font-size:15px;letter-spacing:.14em;text-transform:uppercase}
+.brand a{font-size:13px;font-weight:600;color:var(--ink-soft);text-decoration:none;border-bottom:1px solid rgba(6,50,59,.3)}
+.mini .brand{display:none}
+.hello{margin-top:8px;font-size:17px;font-weight:600;color:var(--ink-soft)}
+.panel{background:linear-gradient(135deg,rgba(255,255,255,.3),rgba(255,255,255,.05) 40%,rgba(255,255,255,0)),var(--glass);border:1.5px solid var(--edge);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.mini .panel{padding:12px;border-radius:18px}
+h2{margin:0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:15px;font-weight:600;color:var(--ink);background:var(--glass-strong);border:1px solid var(--edge);border-radius:999px;padding:10px 14px;min-height:44px;text-align:left}
+.chip:active{background:#fff}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 2px;border-radius:16px;text-decoration:none;color:var(--ink);background:rgba(255,255,255,.14)}
+.tile b{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.tile span{font-size:12px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
+.tile{position:relative}
+.tile i{display:none;position:absolute;top:2px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;font-style:normal;font-size:14px;line-height:24px;text-align:center}
+.editing .tile i{display:block}
+.editing .tile b{opacity:.75}
+.head{display:flex;align-items:center;justify-content:space-between}
+.edit{font:inherit;font-size:13px;font-weight:700;color:var(--ink);background:var(--glass-strong);border:1px solid var(--edge);border-radius:999px;padding:6px 14px;min-height:34px}
+.hint{font-size:13px;color:var(--ink-soft);margin:0}
+.mini .edit,.mini .hint{display:none}
+.tiles .hint{grid-column:1/-1}
+:focus-visible{outline:3px solid #FFD166;outline-offset:2px}
+@media (min-width:600px){.tiles{grid-template-columns:repeat(8,minmax(0,1fr))}}
+/* Clock, weather and the dashboard cards */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.wx{flex:0 1 auto;min-width:0;text-align:right;border:0;background:none;font:inherit;color:inherit;padding:0;min-height:44px}
+.wx b{display:block;font-size:30px;font-weight:800;line-height:1}
+.wx span{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-top:4px}
+.wx.off span{font-size:13px;text-decoration:underline}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.list{display:flex;flex-direction:column}
+.list a{color:var(--ink);text-decoration:none;font-size:14px;font-weight:600;padding:8px 0;border-bottom:1px solid rgba(6,50,59,.12);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list a:last-child{border:0}
+.ring{--p:0;width:84px;height:84px;margin:4px auto 0;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),rgba(255,255,255,.35) 0);display:flex;align-items:center;justify-content:center}
+.ring b{width:66px;height:66px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800}
+.center{text-align:center}
+.mini .duo,.mini .wx{display:none}
+/* Midnight Glass: dark glass with a blue glow */
+body.midnight{--teal:#0A2236;--ink:#E8F5FF;--ink-soft:#9FD3F5;--accent:#4FC3FF;--glass:rgba(27,78,122,.22);--glass-strong:rgba(79,195,255,.12);--edge:rgba(140,210,255,.42);
+  background:radial-gradient(ellipse at 15% 0%,#16507A 0%,#0A2740 45%,#061524 100%);min-height:100vh}
+html.midnight{background:#061524}
+html.midnight.mini{background:transparent}
+body.midnight.mini{background:transparent}
+.midnight .panel{background:linear-gradient(160deg,rgba(120,200,255,.16),rgba(30,80,130,.10) 45%,rgba(10,30,55,.18));border:1px solid var(--edge);box-shadow:0 0 18px rgba(79,195,255,.18),inset 0 1px 0 rgba(255,255,255,.14)}
+.midnight .clock{text-shadow:0 0 22px rgba(79,195,255,.55)}
+.midnight .brand b{color:#7FD8FF}
+.midnight h2{color:#BFE6FF;letter-spacing:.14em}
+.midnight .chip{border-color:rgba(140,210,255,.38)}
+.midnight .chip:active{background:rgba(79,195,255,.3)}
+.midnight .tile{background:rgba(79,195,255,.07)}
+.midnight .tile b{box-shadow:0 0 14px var(--c,rgba(79,195,255,.5))}
+.midnight .tile i{background:#4FC3FF;color:#06233A}
+.midnight .list a{border-color:rgba(140,210,255,.15)}
+.midnight .ring{background:conic-gradient(var(--accent) calc(var(--p)*1%),rgba(140,210,255,.16) 0)}
+.midnight .ring b{background:#0B2A44}
+.midnight .brand a{border-color:rgba(159,211,245,.4)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <div class="brand"><b>RAEE SeaGlass</b><a href="https://raee-industries.me">raee-industries.me</a></div>
+    <div class="top">
+      <div class="clock" id="clock">--:--</div>
+      <button type="button" class="wx off" id="wx" hidden><b id="wxTemp"></b><span id="wxText">Show local weather</span></button>
+    </div>
+    <div class="hello" id="hello">Tap the mic and tell me where to go.</div>
+  </div>
+  <section class="panel">
+    <h2>Try saying</h2>
+    <div class="chips" id="chips"></div>
+  </section>
+  <section class="panel">
+    <div class="head"><h2>Shortcuts</h2><button type="button" class="edit" id="edit">Edit</button></div>
+    <div class="tiles" id="tiles"></div>
+    <p class="hint" id="hint" hidden>Tap ✕ to remove a shortcut. To add one, open a website, tap ⋮ and choose “Add to home shortcuts”.</p>
+  </section>
+  <div class="duo">
+    <section class="panel">
+      <h2>Recent</h2>
+      <div class="list" id="recent"></div>
+    </section>
+    <section class="panel center">
+      <h2>Ads blocked</h2>
+      <div class="ring" id="ring"><b id="ads">0</b></div>
+      <div class="hint" id="adsNote">this week</div>
+    </section>
+  </div>
+</div>
+<script>
+(function () {
+  var bridge = window.SeaGlass;
+  function call(name, fallback) {
+    try { return bridge && bridge[name] ? bridge[name]() : fallback; } catch (e) { return fallback; }
+  }
+  if (/[?&]mini=1/.test(location.search)) document.body.classList.add('mini');
+  if (call('look', 'teal') === 'midnight') {
+    document.body.classList.add('midnight');
+    document.documentElement.classList.add('midnight');
+  }
+  if (document.body.classList.contains('mini')) document.documentElement.classList.add('mini');
+
+  // Local weather (only after the person taps to turn it on).
+  var wx = document.getElementById('wx');
+  window.seaglassWeather = function () {
+    var raw = call('weather', null);
+    if (raw === null) return;
+    wx.hidden = false;
+    var w = null;
+    try { w = raw ? JSON.parse(raw) : null; } catch (e) { }
+    if (w && w.t !== undefined) {
+      wx.classList.remove('off');
+      document.getElementById('wxTemp').textContent = Math.round(w.t) + '°' + (w.u || '');
+      document.getElementById('wxText').textContent = (w.c ? w.c + ' · ' : '') + (w.d || '');
+    } else {
+      wx.classList.add('off');
+      document.getElementById('wxTemp').textContent = '';
+      document.getElementById('wxText').textContent = raw === '' ? 'Show local weather' : 'Weather…';
+    }
+  };
+  wx.addEventListener('click', function () { if (bridge && bridge.enableWeather) bridge.enableWeather(); });
+  window.seaglassWeather();
+
+  // Recent pages and blocked ads.
+  function dashboard() {
+    var recent = document.getElementById('recent');
+    recent.textContent = '';
+    var list = [];
+    try { list = JSON.parse(call('recent', '[]')) || []; } catch (e) { }
+    if (!list.length) {
+      var p = document.createElement('p');
+      p.className = 'hint';
+      p.textContent = 'Pages you visit show up here.';
+      recent.appendChild(p);
+    }
+    list.forEach(function (r) {
+      if (!/^https?:\/\//i.test(r[1] || '')) return;
+      var a = document.createElement('a');
+      a.href = r[1];
+      a.textContent = r[0] || r[1];
+      recent.appendChild(a);
+    });
+    var ads = parseInt(call('adsThisWeek', '-1'), 10);
+    if (ads < 0) {
+      document.getElementById('ads').textContent = '—';
+      document.getElementById('adsNote').textContent = 'Ad blocker is off';
+    } else {
+      document.getElementById('ads').textContent = ads > 9999 ? Math.round(ads / 1000) + 'k' : String(ads);
+      document.getElementById('adsNote').textContent = 'this week';
+      document.getElementById('ring').style.setProperty('--p', String(Math.min(100, Math.round(ads / 5))));
+    }
+  }
+  dashboard();
+  window.addEventListener('pageshow', dashboard);
+
+  function tick() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 15000);
+
+  var h = new Date().getHours();
+  document.getElementById('hello').textContent =
+    (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening') +
+    '. Tap the mic and tell me where to go.';
+
+  var examples = ['Open YouTube', 'How do solar panels work?', 'Search for emergency solar radios',
+                  'Play relaxing music', 'Open a private tab', 'Show my bookmarks',
+                  'Directions to the nearest pharmacy', 'What time is it?'];
+  var chips = document.getElementById('chips');
+  examples.forEach(function (text) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = '“' + text + '”';
+    b.addEventListener('click', function () {
+      if (window.SeaGlass) window.SeaGlass.run(text);
+    });
+    chips.appendChild(b);
+  });
+
+  var known = {
+    'https://www.youtube.com': '#C4302B', 'https://mail.google.com': '#2F6FD6',
+    'https://maps.google.com': '#2E9E5B', 'https://news.google.com': '#5A55D6',
+    'https://weather.com': '#0B8A99', 'https://www.wikipedia.org': '#3D4A52',
+    'https://www.amazon.com': '#E8673C', 'https://raee-industries.me': '#0B4F5C'
+  };
+  var palette = ['#0B8A99', '#2F6FD6', '#5A55D6', '#2E9E5B', '#C4302B', '#E8673C', '#3D4A52', '#0B4F5C', '#8E44AD', '#B7791F'];
+  function colorFor(url) {
+    if (known[url]) return known[url];
+    var h = 0;
+    for (var i = 0; i < url.length; i++) h = (h * 31 + url.charCodeAt(i)) | 0;
+    return palette[Math.abs(h) % palette.length];
+  }
+  function load() {
+    try {
+      var list = JSON.parse((window.SeaGlass && window.SeaGlass.shortcuts()) || '[]');
+      if (Array.isArray(list) && list.length) return list;
+    } catch (e) { }
+    return [];
+  }
+  var tiles = document.getElementById('tiles');
+  var panel = tiles.parentNode;
+  var editing = false;
+  function render() {
+    var sites = load();
+    tiles.textContent = '';
+    if (!sites.length) {
+      var p = document.createElement('p');
+      p.className = 'hint';
+      p.textContent = 'No shortcuts yet. Open a website, tap ⋮ and choose “Add to home shortcuts”.';
+      tiles.appendChild(p);
+    }
+    sites.forEach(function (s) {
+      var name = String(s[0] || ''), url = String(s[1] || '');
+      if (!/^https?:\/\//i.test(url)) return;
+      var a = document.createElement('a');
+      a.className = 'tile';
+      a.href = url;
+      var icon = document.createElement('b');
+      icon.style.background = colorFor(url);
+      icon.textContent = (name.trim().charAt(0) || '?').toUpperCase();
+      icon.setAttribute('aria-hidden', 'true');
+      var label = document.createElement('span');
+      label.textContent = name;
+      var x = document.createElement('i');
+      x.textContent = '✕';
+      x.setAttribute('aria-label', 'Remove ' + name);
+      a.appendChild(icon);
+      a.appendChild(label);
+      a.appendChild(x);
+      a.addEventListener('click', function (ev) {
+        if (!editing) return;
+        ev.preventDefault();
+        if (window.SeaGlass) window.SeaGlass.removeShortcut(url);
+        a.remove();
+      });
+      tiles.appendChild(a);
+    });
+  }
+  render();
+  document.getElementById('edit').addEventListener('click', function () {
+    editing = !editing;
+    panel.classList.toggle('editing', editing);
+    this.textContent = editing ? 'Done' : 'Edit';
+    document.getElementById('hint').hidden = !editing;
+    if (!editing) render();
+  });
+  // Show new shortcuts when coming back to this page.
+  window.addEventListener('pageshow', function () { if (!editing) render(); });
+})();
+</script>
+</body>
+</html>

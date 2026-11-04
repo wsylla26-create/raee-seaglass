@@ -18,6 +18,7 @@ import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryProductDetailsResult;
 import com.android.billingclient.api.QueryPurchasesParams;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -206,14 +207,14 @@ final class Billing implements PurchasesUpdatedListener {
     public void loadProducts() {
         this.client.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(Collections.singletonList(QueryProductDetailsParams.Product.newBuilder().setProductId(UNLOCK).setProductType("inapp").build())).build(), new ProductDetailsResponseListener() {
             @Override
-            public final void onProductDetailsResponse(BillingResult billingResult, List list) {
-                Billing.this.lambda$loadProducts$1(billingResult, list);
+            public final void onProductDetailsResponse(BillingResult billingResult, QueryProductDetailsResult result) {
+                Billing.this.lambda$loadProducts$1(billingResult, result == null ? null : result.getProductDetailsList());
             }
         });
         this.client.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(Collections.singletonList(QueryProductDetailsParams.Product.newBuilder().setProductId(PLUS).setProductType("subs").build())).build(), new ProductDetailsResponseListener() {
             @Override
-            public final void onProductDetailsResponse(BillingResult billingResult, List list) {
-                Billing.this.lambda$loadProducts$3(billingResult, list);
+            public final void onProductDetailsResponse(BillingResult billingResult, QueryProductDetailsResult result) {
+                Billing.this.lambda$loadProducts$3(billingResult, result == null ? null : result.getProductDetailsList());
             }
         });
     }

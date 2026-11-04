@@ -12,12 +12,12 @@ def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '0').toInteger()
 
 android {
     namespace 'me.raeeindustries.seaglass'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId 'me.raeeindustries.seaglass'
         minSdk 26
-        targetSdk 35
+        targetSdk 36
         versionCode 100 + runNumber
         versionName "1.2"
         buildConfigField 'String', 'AI_ENDPOINT', "\"${aiEndpoint}\""
@@ -51,5 +51,5 @@ dependencies {
     implementation 'androidx.core:core:1.13.1'
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
-    implementation 'com.android.billingclient:billing:7.1.1'
+    implementation 'com.android.billingclient:billing:8.0.0'
 }

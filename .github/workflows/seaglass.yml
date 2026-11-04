@@ -63,24 +63,53 @@ jobs:
           name: RAEE-SeaGlass-test-apk
           path: app/build/outputs/apk/debug/*.apk
 
+      # Checks the four UPLOAD_* secrets before signing and says clearly which one is wrong.
+      - name: Check signing key
+        id: key
+        if: steps.unpack.outputs.code == 'yes'
+        env:
+          KEY_B64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEY_B64" ]; then echo "No upload key secrets yet: test builds use a temporary key."; exit 0; fi
+          clean() { printf '%s' "$1" | tr -d '\r\n\t' | sed 's/^ *//; s/ *$//'; }
+          SP=$(clean "$STORE_PW"); KP=$(clean "$KEY_PW"); AL=$(clean "$KEY_ALIAS")
+          printf '%s' "$KEY_B64" | tr -d ' \r\n\t' | base64 -d > "$RUNNER_TEMP/upload.jks" || { echo "::error::UPLOAD_KEYSTORE_BASE64 is not valid key text. Paste the whole contents of seaglass-upload.jks.base64.txt again."; exit 1; }
+          echo "Key file: $(stat -c %s "$RUNNER_TEMP/upload.jks") bytes (expected 4426), fingerprint $(sha256sum "$RUNNER_TEMP/upload.jks" | cut -c1-16) (expected ab4881b0ba09fa0c)"
+          echo "Password lengths: store ${#SP}, key ${#KP} (expected 24 and 24). Alias: $AL"
+          if ! keytool -list -keystore "$RUNNER_TEMP/upload.jks" -storepass "$SP" >/dev/null 2>&1; then
+            if [ "$(sha256sum "$RUNNER_TEMP/upload.jks" | cut -c1-16)" != "ab4881b0ba09fa0c" ]; then
+              echo "::error::UPLOAD_KEYSTORE_BASE64 doesn't match seaglass-upload.jks.base64.txt (part of it is missing or changed). Paste it again."
+            else
+              echo "::error::UPLOAD_STORE_PASSWORD is wrong. Paste the password from seaglass-upload-key-info.txt again."
+            fi
+            exit 1
+          fi
+          if ! keytool -exportcert -keystore "$RUNNER_TEMP/upload.jks" -storepass "$SP" -alias "$AL" -keypass "$KP" >/dev/null 2>&1; then
+            echo "::error::UPLOAD_KEY_ALIAS (should be seaglass-upload) or UPLOAD_KEY_PASSWORD is wrong."; exit 1
+          fi
+          echo "::add-mask::$SP"; echo "::add-mask::$KP"
+          { echo "SIGN_STORE_PW=$SP"; echo "SIGN_KEY_PW=$KP"; echo "SIGN_ALIAS=$AL"; } >> "$GITHUB_ENV"
+          echo "ready=yes" >> "$GITHUB_OUTPUT"
+          echo "Signing key OK."
+
       # Public download for anyone (no GitHub sign-in): the QR code / raee-industries.me/seaglass points here.
       # Signed with your upload key once the UPLOAD_* secrets are set, so people can update without reinstalling.
       - name: Publish public download
         if: steps.unpack.outputs.code == 'yes' && github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ github.token }}
-          KEY_B64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
           AI_ENDPOINT: ${{ secrets.AI_ENDPOINT }}
           AI_APP_KEY: ${{ secrets.AI_APP_KEY }}
         run: |
-          if [ -n "$KEY_B64" ]; then
-            echo "$KEY_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          if [ "${{ steps.key.outputs.ready }}" = "yes" ]; then
             gradle --no-daemon :app:assembleRelease \
               -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.jks" \
-              -Pandroid.injected.signing.store.password="${{ secrets.UPLOAD_STORE_PASSWORD }}" \
-              -Pandroid.injected.signing.key.alias="${{ secrets.UPLOAD_KEY_ALIAS }}" \
-              -Pandroid.injected.signing.key.password="${{ secrets.UPLOAD_KEY_PASSWORD }}"
-            rm -f "$RUNNER_TEMP/upload.jks"
+              -Pandroid.injected.signing.store.password="$SIGN_STORE_PW" \
+              -Pandroid.injected.signing.key.alias="$SIGN_ALIAS" \
+              -Pandroid.injected.signing.key.password="$SIGN_KEY_PW"
             cp app/build/outputs/apk/release/*.apk RAEE-SeaGlass.apk
           else
             cp app/build/outputs/apk/debug/*.apk RAEE-SeaGlass.apk
@@ -99,12 +128,12 @@ jobs:
           AI_ENDPOINT: ${{ secrets.AI_ENDPOINT }}
           AI_APP_KEY: ${{ secrets.AI_APP_KEY }}
         run: |
-          echo "${{ secrets.UPLOAD_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          if [ "${{ steps.key.outputs.ready }}" != "yes" ]; then echo "::error::Add the four UPLOAD_* secrets first."; exit 1; fi
           gradle --no-daemon :app:bundleRelease \
             -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.jks" \
-            -Pandroid.injected.signing.store.password="${{ secrets.UPLOAD_STORE_PASSWORD }}" \
-            -Pandroid.injected.signing.key.alias="${{ secrets.UPLOAD_KEY_ALIAS }}" \
-            -Pandroid.injected.signing.key.password="${{ secrets.UPLOAD_KEY_PASSWORD }}"
+            -Pandroid.injected.signing.store.password="$SIGN_STORE_PW" \
+            -Pandroid.injected.signing.key.alias="$SIGN_ALIAS" \
+            -Pandroid.injected.signing.key.password="$SIGN_KEY_PW"
           rm -f "$RUNNER_TEMP/upload.jks"
 
       - uses: actions/upload-artifact@v4

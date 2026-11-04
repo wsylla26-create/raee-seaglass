@@ -48,7 +48,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         if: steps.unpack.outputs.code == 'yes'
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.13'
 
       - name: Build test APK
         if: steps.unpack.outputs.code == 'yes'

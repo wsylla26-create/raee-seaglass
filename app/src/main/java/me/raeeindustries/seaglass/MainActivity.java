@@ -1290,9 +1290,25 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         if (this.current != null && !this.current.isPrivate && WebSupport.isWeb(this.current.url) && !WebSupport.isAppPage(this.current.url)) {
             i.putExtra("me.raeeindustries.seaglass.URL", this.current.url);
         }
-        startForegroundService(i);
+        try {
+            startForegroundService(i);
+        } catch (RuntimeException e) {
+            showStatus("The bubble couldn't start: " + e.getClass().getSimpleName() + ". Please try again.", false);
+            return;
+        }
+        showStatus("Bubble is on. Look for it on your home screen.", false);
         this.voice.stopSpeaking();
-        moveTaskToBack(true);
+        this.handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!moveTaskToBack(true)) {
+                    Intent home = new Intent(Intent.ACTION_MAIN);
+                    home.addCategory(Intent.CATEGORY_HOME);
+                    home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(home);
+                }
+            }
+        }, 350L);
     }
 
     @Override

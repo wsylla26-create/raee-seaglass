@@ -88,6 +88,7 @@ public class FloatingService extends Service implements VoiceEngine.Listener, Co
             this.wm.addView(this.bubble, this.bubbleLp);
             this.bubbleShown = true;
         } catch (RuntimeException e) {
+            android.widget.Toast.makeText(this, "RAEE SeaGlass couldn't show the bubble. Check \u201cDisplay over other apps\u201d.", android.widget.Toast.LENGTH_LONG).show();
             stopSelf();
         }
     }
@@ -124,13 +125,22 @@ public class FloatingService extends Service implements VoiceEngine.Listener, Co
         if (checkSelfPermission("android.permission.RECORD_AUDIO") == 0) {
             micAllowed = true;
         }
-        if (Build.VERSION.SDK_INT >= 34) {
-            int type = micAllowed ? 1073741824 | 128 : 1073741824;
-            startForeground(7, n, type);
-        } else if (Build.VERSION.SDK_INT >= 30 && micAllowed) {
-            startForeground(7, n, 128);
-        } else {
-            startForeground(7, n);
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                int type = micAllowed ? 1073741824 | 128 : 1073741824;
+                startForeground(7, n, type);
+            } else if (Build.VERSION.SDK_INT >= 30 && micAllowed) {
+                startForeground(7, n, 128);
+            } else {
+                startForeground(7, n);
+            }
+        } catch (RuntimeException e) {
+            // Fall back to the special-use type alone (no microphone type) so the bubble still shows.
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(7, n, 1073741824);
+            } else {
+                startForeground(7, n);
+            }
         }
     }
 

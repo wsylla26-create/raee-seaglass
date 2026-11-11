@@ -613,6 +613,53 @@ public class FloatingService extends Service implements VoiceEngine.Listener, Co
     }
 
     @Override
+    public String saveSite(int number, String url) {
+        if (number < 1 || number > 99) {
+            return "Pick a number from 1 to 99.";
+        }
+        String title;
+        if (url == null) {
+            if (WebSupport.isAppPage(this.currentUrl) || !WebSupport.isWeb(this.currentUrl)) {
+                return "Open a website first, then say save site as number " + number + ".";
+            }
+            url = this.currentUrl;
+            title = this.web.getTitle();
+        } else {
+            title = url.replaceAll("^https?://(www\\.)?", "");
+        }
+        this.library.setSlot(number, title, url);
+        return "Saved " + Library.slotName(this.library.slot(number)) + " as number " + number + ".";
+    }
+
+    @Override
+    public String openSavedSite(int number) {
+        Library.Entry e = this.library.slot(number);
+        if (e == null) {
+            return "Number " + number + " is empty.";
+        }
+        openUrl(e.url);
+        return "Opening number " + number + ", " + Library.slotName(e) + ".";
+    }
+
+    @Override
+    public String removeSavedSite(int number) {
+        Library.Entry e = this.library.slot(number);
+        if (e == null || !this.library.removeSlot(number)) {
+            return "Number " + number + " is already empty.";
+        }
+        return "Removed " + Library.slotName(e) + " from number " + number + ".";
+    }
+
+    @Override
+    public String listSavedSites() {
+        StringBuilder spoken = new StringBuilder();
+        for (java.util.Map.Entry<Integer, Library.Entry> s : this.library.slots().entrySet()) {
+            spoken.append(spoken.length() == 0 ? "" : "; ").append("number ").append(s.getKey()).append(", ").append(Library.slotName(s.getValue()));
+        }
+        return spoken.length() == 0 ? "You have no saved sites yet." : "Your saved sites: " + spoken + ".";
+    }
+
+    @Override
     public void bookmarkPage() {
         if (WebSupport.isAppPage(this.currentUrl) || !WebSupport.isWeb(this.currentUrl)) {
             tell("Open a website first, then bookmark it.");

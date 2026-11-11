@@ -169,6 +169,62 @@ final class Library {
         return u == null ? "" : u.replaceAll("^https?://(www\\.)?", "").replaceAll("/+$", "");
     }
 
+    // Numbered saved sites: the user says "save this site as number 1", later "open number 1".
+    Entry slot(int number) {
+        try {
+            JSONObject o = new JSONObject(this.prefs.getString("slots", "{}")).optJSONObject(String.valueOf(number));
+            if (o == null || o.optString("u").isEmpty()) {
+                return null;
+            }
+            return new Entry(o.optString("t"), o.optString("u"), o.optLong("w"));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    void setSlot(int number, String title, String url) {
+        try {
+            JSONObject all = new JSONObject(this.prefs.getString("slots", "{}"));
+            JSONObject o = new JSONObject();
+            o.put("t", clean(title, url));
+            o.put("u", url);
+            o.put("w", System.currentTimeMillis());
+            all.put(String.valueOf(number), o);
+            this.prefs.edit().putString("slots", all.toString()).apply();
+        } catch (Exception e) {
+        }
+    }
+
+    boolean removeSlot(int number) {
+        try {
+            JSONObject all = new JSONObject(this.prefs.getString("slots", "{}"));
+            if (all.remove(String.valueOf(number)) == null) {
+                return false;
+            }
+            this.prefs.edit().putString("slots", all.toString()).apply();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Saved sites in number order.
+    java.util.TreeMap<Integer, Entry> slots() {
+        java.util.TreeMap<Integer, Entry> out = new java.util.TreeMap<>();
+        for (int i = 1; i <= 99; i++) {
+            Entry e = slot(i);
+            if (e != null) {
+                out.put(i, e);
+            }
+        }
+        return out;
+    }
+
+    static String slotName(Entry e) {
+        String host = trimUrl(e.url).replaceAll("/.*$", "");
+        return (e.title == null || e.title.isEmpty() || e.title.equals(e.url)) ? host : e.title;
+    }
+
     void saveTabs(List<String> urls, int current) {
         try {
             JSONObject o = new JSONObject();

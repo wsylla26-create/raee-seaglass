@@ -1020,6 +1020,12 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
                 MainActivity.this.showBookmarks();
             }
         }, null, false, false));
+        rows.add(new Row("Saved sites", "Your numbered sites: say \u201copen number 1\u201d", new Runnable() {
+            @Override
+            public final void run() {
+                MainActivity.this.listSavedSites();
+            }
+        }, null, false, false));
         rows.add(new Row("History", null, new Runnable() {
             @Override
             public final void run() {
@@ -1523,6 +1529,81 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         this.library.toggleBookmark(t.web.getTitle(), t.url);
         updateStar();
         return "Saved tab " + number + ", " + label(t) + ", to your bookmarks.";
+    }
+
+    // ---- Numbered saved sites ("save site as number 1", "open number 1") ----
+    @Override
+    public String saveSite(int number, String url) {
+        if (number < 1 || number > 99) {
+            return "Pick a number from 1 to 99.";
+        }
+        String title;
+        if (url == null) {
+            if (this.current == null || WebSupport.isAppPage(this.current.url) || !WebSupport.isWeb(this.current.url)) {
+                return "Open a website first, then say save site as number " + number + ".";
+            }
+            url = this.current.url;
+            title = this.current.web.getTitle();
+        } else {
+            title = url.replaceAll("^https?://(www\\.)?", "");
+        }
+        Library.Entry old = this.library.slot(number);
+        this.library.setSlot(number, title, url);
+        String name = Library.slotName(this.library.slot(number));
+        String reply = "Saved " + name + " as number " + number + ".";
+        if (old != null && !old.url.equals(url)) {
+            reply = "Number " + number + " was " + Library.slotName(old) + ". It's now " + name + ".";
+        }
+        return reply + " Say open number " + number + " to go there.";
+    }
+
+    @Override
+    public String openSavedSite(int number) {
+        Library.Entry e = this.library.slot(number);
+        if (e == null) {
+            return "Number " + number + " is empty. Open a site and say save site as number " + number + ".";
+        }
+        closeSheet();
+        openUrl(e.url);
+        return "Opening number " + number + ", " + Library.slotName(e) + ".";
+    }
+
+    @Override
+    public String removeSavedSite(int number) {
+        Library.Entry e = this.library.slot(number);
+        if (e == null || !this.library.removeSlot(number)) {
+            return "Number " + number + " is already empty.";
+        }
+        return "Removed " + Library.slotName(e) + " from number " + number + ".";
+    }
+
+    @Override
+    public String listSavedSites() {
+        java.util.TreeMap<Integer, Library.Entry> slots = this.library.slots();
+        List<Row> rows = new ArrayList<>();
+        StringBuilder spoken = new StringBuilder();
+        for (final java.util.Map.Entry<Integer, Library.Entry> s : slots.entrySet()) {
+            final int n = s.getKey();
+            final Library.Entry e = s.getValue();
+            rows.add(new Row(n + ". " + Library.slotName(e), e.url, new Runnable() {
+                @Override
+                public final void run() {
+                    MainActivity.this.openSavedSite(n);
+                }
+            }, new Runnable() {
+                @Override
+                public final void run() {
+                    MainActivity.this.removeSavedSite(n);
+                    MainActivity.this.listSavedSites();
+                }
+            }, false, false));
+            spoken.append(spoken.length() == 0 ? "" : "; ").append("number ").append(n).append(", ").append(Library.slotName(e));
+        }
+        showSheet("Saved sites", rows, "No saved sites yet. Open a site and say: save site as number 1.", null, null);
+        if (slots.isEmpty()) {
+            return "You have no saved sites yet. Open a site and say save site as number 1.";
+        }
+        return "Your saved sites: " + spoken + ".";
     }
 
     @Override
@@ -3925,6 +4006,12 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
             @Override
             public void run() {
                 showBookmarks();
+            }
+        }));
+        app.add(tile(getDrawable(R.drawable.ic_star_filled), "Saved sites", false, true, new Runnable() {
+            @Override
+            public void run() {
+                listSavedSites();
             }
         }));
         app.add(tile(new MenuIcon(MenuIcon.HISTORY, Glass.INK), "History", false, true, new Runnable() {

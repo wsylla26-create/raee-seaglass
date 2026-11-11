@@ -1475,6 +1475,65 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         closeTabNow(this.current);
     }
 
+    // Tab numbers go left to right in the tab list: tab 1, tab 2, tab 3...
+    @Override
+    public int tabCount() {
+        return this.tabs.size();
+    }
+
+    private String noSuchTab(int number) {
+        int n = this.tabs.size();
+        return "There's no tab " + number + ". You have " + n + (n == 1 ? " tab open." : " tabs open.");
+    }
+
+    @Override
+    public String switchToTab(int number) {
+        if (number < 1 || number > this.tabs.size()) {
+            return noSuchTab(number);
+        }
+        Tab t = this.tabs.get(number - 1);
+        closeSheet();
+        switchTo(t);
+        return "Tab " + number + ": " + label(t) + ".";
+    }
+
+    @Override
+    public String closeTabNumber(int number) {
+        if (number < 1 || number > this.tabs.size()) {
+            return noSuchTab(number);
+        }
+        closeSheet();
+        closeTabNow(this.tabs.get(number - 1));
+        int left = this.tabs.size();
+        return "Tab " + number + " closed. " + left + (left == 1 ? " tab is open." : " tabs are open.");
+    }
+
+    @Override
+    public String saveTabNumber(int number) {
+        if (number < 1 || number > this.tabs.size()) {
+            return noSuchTab(number);
+        }
+        Tab t = this.tabs.get(number - 1);
+        if (WebSupport.isAppPage(t.url) || !WebSupport.isWeb(t.url)) {
+            return "Tab " + number + " doesn't have a website open yet.";
+        }
+        if (this.library.isBookmarked(t.url)) {
+            return "Tab " + number + " is already saved in your bookmarks.";
+        }
+        this.library.toggleBookmark(t.web.getTitle(), t.url);
+        updateStar();
+        return "Saved tab " + number + ", " + label(t) + ", to your bookmarks.";
+    }
+
+    @Override
+    public String closeAllTabs() {
+        closeSheet();
+        for (Tab t : new ArrayList<>(this.tabs)) {
+            closeTabNow(t);
+        }
+        return "All tabs closed. Here's a fresh one.";
+    }
+
     @Override
     public void nextTab() {
         if (this.tabs.size() < 2) {
@@ -1500,7 +1559,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
                 String sub2 = t.url;
                 sub = WebSupport.isAppPage(sub2) ? "Start page" : t.url;
             }
-            rows.add(new Row(label(t), sub, new Runnable() {
+            rows.add(new Row((this.tabs.indexOf(t) + 1) + ". " + label(t), sub, new Runnable() {
                 @Override
                 public final void run() {
                     MainActivity.this.switchTo(t);

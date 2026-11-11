@@ -20,6 +20,17 @@ final class CommandRouter {
     private static final Pattern TRANSLATE = Pattern.compile("^translate(?: this| the)?(?: page| site| website| article)?(?: (?:to|into|in) (.+))?$");
     private static final Map<String, String> SITES = new HashMap();
 
+    // Spoken tab numbers: "1", "one", "first", and what speech often hears ("to", "too", "for", "won").
+    private static final String NUM = "(\\d{1,2}|one|won|first|two|to|too|second|three|third|four|for|fourth|five|fifth|six|sixth|seven|seventh|eight|eighth|nine|ninth|ten|tenth)";
+    private static final String TAB_NO = "(?:(?:the )?(?:tab|site|page|website|number|slot)(?: number)? |number )" + NUM;
+    private static final Pattern CLOSE_N = Pattern.compile("^(?:close|shut|remove|delete|get rid of) (?:" + TAB_NO + "|(?:the )?" + NUM + " tab)$");
+    private static final Pattern SAVE_N = Pattern.compile("^(?:save|bookmark|keep|star)(?: the)?(?: site| page| website| tab)?(?: (?:at|on|in|from|of|to))? (?:" + TAB_NO + "|(?:the )?" + NUM + " tab)$");
+    private static final Pattern SWITCH_N = Pattern.compile("^(?:(?:go|switch|change|move|jump|take me) (?:to|back to) |open |show(?: me)? |)(?:" + TAB_NO + "|(?:the )?" + NUM + " tab)$");
+    private static final Pattern NEW_TAB = Pattern.compile("^(?:open|start|add|make|create|give me|get|i need|i want)?(?: me)? ?(?:a |another |one more |an extra )?(?:new |fresh |blank |empty |another |second |extra )?tab(?: for me)?$");
+    private static final Pattern NEW_TAB_THEN = Pattern.compile("^(?:open |start |add )?(?:a |another )?(?:new |another |second )tab (?:and |then |to |with |for |on |at )(?:(?:go to|open|visit|load|show me|take me to) )?(.+)$");
+    private static final Pattern IN_NEW_TAB = Pattern.compile("^(?:open |go to |visit |load |show me |take me to )?(.+?) (?:in|on|into) (?:a |another |the )?(?:new|another|separate|second|different) tab$");
+    private static final Pattern POLITE = Pattern.compile("^(?:(?:hey|hi|ok|okay) )?(?:(?:nfurian|en furian|sea ?glass)[ ,]+)?(?:(?:can|could|would|will) you (?:please )?|please |i(?:'d| would) like (?:you )?to |i want (?:you )?to |let's |go ahead and )+");
+
     interface Browser {
         void ask(String str);
 
@@ -57,6 +68,27 @@ final class CommandRouter {
 
         default String tool(String name, String arg) {
             return "Open the full browser to do that.";
+        }
+
+        default int tabCount() {
+            return 0;
+        }
+
+        default String switchToTab(int number) {
+            showTabs();
+            return null;
+        }
+
+        default String closeTabNumber(int number) {
+            return "Tabs are in the full app. Tap the open button to see them.";
+        }
+
+        default String saveTabNumber(int number) {
+            return "Tabs are in the full app. Tap the open button to see them.";
+        }
+
+        default String closeAllTabs() {
+            return "Tabs are in the full app. Tap the open button to see them.";
         }
     }
 
@@ -104,6 +136,16 @@ final class CommandRouter {
             return null;
         }
         String t = text.toLowerCase(Locale.ROOT).replaceAll("[.!?,]+$", "").trim();
+        String polite = POLITE.matcher(t).replaceFirst("").replaceAll("[ ,]+(?:please|for me|now|thanks|thank you)$", "").trim();
+        if (!polite.isEmpty() && !polite.equals(t) && !QUESTION.matcher(t).matches()) {
+            t = polite;
+        } else if (!polite.isEmpty() && polite.matches(".*\\btabs?\\b.*")) {
+            t = polite;
+        }
+        String tabReply = tabCommand(t, b);
+        if (tabReply != null) {
+            return tabReply.isEmpty() ? null : tabReply;
+        }
         if (t.matches("stop|quiet|be quiet|cancel|shush|stop talking|stop reading|pause")) {
             b.stopSpeaking();
             return null;
@@ -128,9 +170,8 @@ final class CommandRouter {
             b.newTab(true);
             return "Private tab opened.";
         }
-        if (t.matches("(open |start )?(a )?new tab")) {
-            b.newTab(false);
-            return "New tab.";
+        if (NEW_TAB.matcher(t).matches() && t.contains("tab")) {
+            return openNewTab(b);
         }
         if (t.matches("close (this |the |my )?tab")) {
             b.closeTab();
@@ -270,6 +311,89 @@ final class CommandRouter {
             return null;
         }
         return search(text, b);
+    }
+
+    // Tab numbers count from the left: tab 1 is the first tab, tab 2 the next one, and so on.
+    // Returns null when the words aren't a tab command, "" when handled with nothing to say.
+    private static String tabCommand(String t, Browser b) {
+        if (!t.matches(".*\\b(tabs?|site|page|website|number|slot)\\b.*")) {
+            return null;
+        }
+        if (NEW_TAB.matcher(t).matches()) {
+            return openNewTab(b);
+        }
+        if (t.matches("close (all|every|all the|all my|all of my|all of the) tabs?|close everything")) {
+            return b.closeAllTabs();
+        }
+        Matcher m = NEW_TAB_THEN.matcher(t);
+        if (m.matches()) {
+            return newTabThen(m.group(1), b);
+        }
+        Matcher m2 = IN_NEW_TAB.matcher(t);
+        if (m2.matches() && !m2.group(1).matches("(a |the )?(new |private )?tab")) {
+            return newTabThen(m2.group(1), b);
+        }
+        Matcher m3 = CLOSE_N.matcher(t);
+        if (m3.matches()) {
+            int n = tabNumber(m3.group(1) != null ? m3.group(1) : m3.group(2));
+            return n > 0 ? orEmpty(b.closeTabNumber(n)) : null;
+        }
+        Matcher m4 = SAVE_N.matcher(t);
+        if (m4.matches()) {
+            int n = tabNumber(m4.group(1) != null ? m4.group(1) : m4.group(2));
+            return n > 0 ? orEmpty(b.saveTabNumber(n)) : null;
+        }
+        Matcher m5 = SWITCH_N.matcher(t);
+        if (m5.matches()) {
+            int n = tabNumber(m5.group(1) != null ? m5.group(1) : m5.group(2));
+            return n > 0 ? orEmpty(b.switchToTab(n)) : null;
+        }
+        return null;
+    }
+
+    private static String orEmpty(String s) {
+        return s == null ? "" : s;
+    }
+
+    private static String openNewTab(Browser b) {
+        b.newTab(false);
+        int n = b.tabCount();
+        return n > 0 ? "New tab. This is tab " + n + "." : "New tab.";
+    }
+
+    private static String newTabThen(String what, Browser b) {
+        String w = what.trim().replaceAll("^(the|my) ", "");
+        b.newTab(false);
+        String cmd = w.matches("^(search|google|look up|find|play|watch|directions to|navigate to) .+") ? w : "open " + w;
+        String reply = run(cmd, b);
+        int n = b.tabCount();
+        if (n <= 0) {
+            return reply;
+        }
+        return (reply == null ? "" : reply + " ") + "That's tab " + n + ".";
+    }
+
+    static int tabNumber(String w) {
+        if (w == null) {
+            return -1;
+        }
+        String s = w.trim();
+        if (s.matches("\\d{1,2}")) {
+            return Integer.parseInt(s);
+        }
+        switch (s) {
+            case "one": case "won": case "first": return 1;
+            case "two": case "to": case "too": case "second": return 2;
+            case "three": case "third": return 3;
+            case "four": case "for": case "fourth": return 4;
+            case "five": case "fifth": return 5;
+            case "six": case "sixth": return 6;
+            case "seven": case "seventh": return 7;
+            case "eight": case "eighth": return 8;
+            case "nine": case "ninth": return 9;
+            case "ten": case "tenth": return 10;
+            default: return -1;
+        }
     }
 
     static boolean looksLikeUrl(String s) {

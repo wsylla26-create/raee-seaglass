@@ -46,7 +46,7 @@ final class Glass {
     }
 
     static void load(Context c) {
-        apply(MIDNIGHT.equals(c.getSharedPreferences("seaglass", 0).getString("look", TEAL)));
+        apply(MIDNIGHT.equals(c.getSharedPreferences("seaglass", 0).getString("look", MIDNIGHT)));
     }
 
     static void save(Context c, boolean useMidnight) {
@@ -57,28 +57,29 @@ final class Glass {
     static void apply(boolean useMidnight) {
         midnight = useMidnight;
         if (useMidnight) {
-            TEAL_BG = -16113098;
-            INK = -1509889;
-            INK_SOFT = -6302731;
-            ACCENT = -14771232;
-            GLASS = 1293635194;
-            GLASS_PANEL = -536139968;
-            GLASS_STRONG = -870957210;
-            EDGE = -1500720385;
-            GLASS_FIELD = -1291445715;
-            SHEET = -150397388;
-            ROW = -15452326;
-            ROW_ON = -14787958;
-            PILL = -234349520;
-            SCRIM = 1711278100;
-            PRIVATE = -1724240244;
-            LOCK = -149680333;
-            BUBBLE = -2145694086;
+            // Neon Glass: deep-space navy with glowing electric-blue glass edges.
+            TEAL_BG = 0xFF040A1C;
+            INK = 0xFFEAF6FF;
+            INK_SOFT = 0xFF8EC5F5;
+            ACCENT = 0xFF2E8BFF;
+            GLASS = 0x590A1A40;
+            GLASS_PANEL = 0xCC071433;
+            GLASS_STRONG = 0x33349CFF;
+            EDGE = 0xE64FB4FF;
+            GLASS_FIELD = 0xB30A1838;
+            SHEET = 0xF2060E26;
+            ROW = 0xCC0A1A3D;
+            ROW_ON = 0xD912357A;
+            PILL = 0xF0081633;
+            SCRIM = 0x99000510;
+            PRIVATE = 0x99602A9E;
+            LOCK = 0xF7060E26;
+            BUBBLE = 0x80122B66;
             WEB_BOX = 637934125;
-            SWIPE_BG = -16046272;
-            SHEEN = new int[]{1082970879, 227332863, 9229055};
-            SHEEN_OVAL = new int[]{1435292415, 227332863, 9229055};
-            GLOW = -11549697;
+            SWIPE_BG = 0xFF0A1838;
+            SHEEN = new int[]{0x334FB4FF, 0x0D4FB4FF, 0x004FB4FF};
+            SHEEN_OVAL = new int[]{0x554FB4FF, 0x0D4FB4FF, 0x004FB4FF};
+            GLOW = 0xFF2E8BFF;
             return;
         }
         TEAL_BG = -7349791;
@@ -111,6 +112,17 @@ final class Glass {
         }
         v.setOutlineAmbientShadowColor(GLOW);
         v.setOutlineSpotShadowColor(GLOW);
+    }
+
+    static final int NEON = 0xFF4FB4FF;
+    static final int NEON_CYAN = 0xFF3BE8FF;
+    static final int NEON_VIOLET = 0xFF9B6BFF;
+    static final int NEON_GREEN = 0xFF4DF59A;
+
+    /** Deep-space backdrop used behind the Neon Glass chrome. */
+    static Drawable space() {
+        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0xFF0B1A4A, 0xFF050C24, 0xFF02050F});
     }
 
     private Glass() {

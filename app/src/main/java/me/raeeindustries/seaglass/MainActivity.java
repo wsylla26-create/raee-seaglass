@@ -272,10 +272,11 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
     }
 
     private void buildUi() {
+        this.voiceCard = null;
         this.tealFadeOn = false;
         this.handler.removeCallbacks(this.tealTick);
         this.root = new FrameLayout(this);
-        this.root.setBackgroundColor(Glass.TEAL_BG);
+        paintRoot();
         this.webHolder = new FrameLayout(this);
         this.swipe = new SwipeRefreshLayout(this);
         this.swipe.setColorSchemeColors(Glass.ACCENT);
@@ -790,8 +791,12 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         });
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(1);
-        linearLayout.setBackground(Glass.panel(this, Glass.SHEET, 26.0f));
+        linearLayout.setBackground(Glass.midnight ? VoiceCard.neonCard(this, 26.0f) : Glass.panel(this, Glass.SHEET, 26.0f));
         linearLayout.setPadding(dp(16.0f), dp(12.0f), dp(16.0f), dp(16.0f));
+        if (Glass.midnight) {
+            linearLayout.setElevation(dp(10.0f));
+            Glass.glow(linearLayout);
+        }
         linearLayout.setClickable(true);
         LinearLayout header = new LinearLayout(this);
         header.setGravity(16);
@@ -820,7 +825,8 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
                 super.onMeasure(widthSpec, heightSpec);
             }
         };
-        LinearLayout list = new LinearLayout(this);
+        // Neon Glass: cards linked by glowing energy lines.
+        LinearLayout list = Glass.midnight ? new EnergyList(this) : new LinearLayout(this);
         list.setOrientation(1);
         scroll.addView(list);
         if (rows.isEmpty() && emptyText != null) {
@@ -1065,7 +1071,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
                 }
             }, null, false, false));
         }
-        rows.add(new Row("Look: " + (Glass.midnight ? "Midnight Glass" : "Teal Glass"), Glass.midnight ? "Switch to Teal Glass" : "Switch to Midnight Glass", new Runnable() {
+        rows.add(new Row("Look: " + (Glass.midnight ? "Neon Glass" : "Teal Glass"), Glass.midnight ? "Switch to Teal Glass" : "Switch to Neon Glass", new Runnable() {
             @Override
             public final void run() {
                 MainActivity.this.lambda$showMenu$33();
@@ -1894,6 +1900,14 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
     @Override
     public void onListeningChanged(boolean listening) {
         updateMic();
+        if (Glass.midnight) {
+            if (listening) {
+                showVoiceCard();
+            } else if (this.voiceCard != null && !this.voiceCardDone) {
+                this.handler.postDelayed(this.hideVoiceCard, 1200L);
+            }
+            return;
+        }
         if (listening) {
             showStatus("Listening…", false);
         }
@@ -1901,19 +1915,86 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
 
     @Override
     public void onPartial(String text) {
+        if (Glass.midnight && this.voiceCard != null) {
+            this.voiceCard.partial(text);
+            return;
+        }
         showStatus(text, false);
     }
 
     @Override
     public void onHeard(String text) {
-        showStatus("“" + text + "”");
+        if (Glass.midnight && this.voiceCard != null) {
+            this.voiceCard.completed(text);
+            this.voiceCardDone = true;
+            this.handler.removeCallbacks(this.hideVoiceCard);
+            this.handler.postDelayed(this.hideVoiceCard, 1600L);
+        } else {
+            showStatus("“" + text + "”");
+        }
         closeSheet();
         handleRequest(text, true);
     }
 
     @Override
     public void onVoiceError(String message) {
+        if (Glass.midnight && this.voiceCard != null) {
+            this.voiceCard.failed(message);
+            this.voiceCardDone = true;
+            this.handler.removeCallbacks(this.hideVoiceCard);
+            this.handler.postDelayed(this.hideVoiceCard, 2600L);
+            return;
+        }
         showStatus(message);
+    }
+
+    // ---- Neon Glass voice card ----
+    private VoiceCard voiceCard;
+    private boolean voiceCardDone;
+    private final Runnable hideVoiceCard = new Runnable() {
+        @Override
+        public void run() {
+            final VoiceCard card = MainActivity.this.voiceCard;
+            MainActivity.this.voiceCard = null;
+            if (card == null) {
+                return;
+            }
+            card.animate().alpha(0.0f).translationY(dp(16.0f)).setDuration(220L).withEndAction(new Runnable() {
+                @Override
+                public void run() {
+                    if (card.getParent() != null) {
+                        MainActivity.this.root.removeView(card);
+                    }
+                }
+            }).start();
+        }
+    };
+
+    private void showVoiceCard() {
+        this.handler.removeCallbacks(this.hideVoiceCard);
+        this.voiceCardDone = false;
+        this.statusPill.setVisibility(8);
+        if (this.voiceCard == null) {
+            this.voiceCard = new VoiceCard(this);
+            int width = Math.min(this.root.getWidth() - this.insetLeft - this.insetRight - dp(32.0f), dp(440.0f));
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(width > 0 ? width : -1, -2, 81);
+            lp.bottomMargin = this.insetBottom + dp(18.0f);
+            this.root.addView(this.voiceCard, lp);
+            this.voiceCard.setAlpha(0.0f);
+            this.voiceCard.setTranslationY(dp(16.0f));
+            this.voiceCard.animate().alpha(1.0f).translationY(0.0f).setDuration(200L).start();
+        } else {
+            this.voiceCard.listening();
+        }
+    }
+
+    /** Teal Glass: solid (fading) teal. Neon Glass: deep-space gradient. */
+    private void paintRoot() {
+        if (Glass.midnight) {
+            this.root.setBackground(Glass.space());
+        } else {
+            this.root.setBackgroundColor(Glass.TEAL_BG);
+        }
     }
 
     @Override
@@ -3204,7 +3285,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
 
     private void setLook(boolean useMidnight) {
         if (Glass.midnight == useMidnight) {
-            tell(useMidnight ? "Midnight Glass is already on." : "Teal Glass is already on.");
+            tell(useMidnight ? "Neon Glass is already on." : "Teal Glass is already on.");
             return;
         }
         Glass.save(this, useMidnight);
@@ -3236,7 +3317,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         if (this.current != null && this.current.isPrivate) {
             refreshChrome();
         }
-        tell(useMidnight ? "Midnight Glass." : "Teal Glass.");
+        tell(useMidnight ? "Neon Glass." : "Teal Glass.");
     }
 
     private void updateSystemBars() {
@@ -3867,7 +3948,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         final boolean onWeb = onWebPage();
         this.sheet = new FrameLayout(this);
         // Dim the page more than other sheets so the menu stands out.
-        this.sheet.setBackgroundColor(Glass.midnight ? 0x66000000 : 0x4006323B);
+        this.sheet.setBackgroundColor(Glass.midnight ? 0x8C000510 : 0x4006323B);
         this.sheet.setClickable(true);
         this.sheet.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -3879,7 +3960,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         card.setOrientation(1);
         // Frosted glass: nearly solid, with the usual glass edge and sheen.
         int frost = Glass.midnight ? 0xF20D2A40 : 0xF5EEFBFC;
-        card.setBackground(Glass.clearGlass(this, frost, 26.0f));
+        card.setBackground(Glass.midnight ? VoiceCard.neonCard(this, 26.0f) : Glass.clearGlass(this, frost, 26.0f));
         card.setElevation(dp(8.0f));
         card.setPadding(dp(12.0f), dp(12.0f), dp(12.0f), dp(10.0f));
         card.setClickable(true);
@@ -4251,7 +4332,7 @@ public class MainActivity extends Activity implements VoiceEngine.Listener, Comm
         this.handler.removeCallbacks(this.tealTick);
         if (Glass.midnight) {
             this.tealFadeOn = false;
-            this.root.setBackgroundColor(Glass.TEAL_BG);
+            paintRoot();
             return;
         }
         this.tealFadeOn = true;

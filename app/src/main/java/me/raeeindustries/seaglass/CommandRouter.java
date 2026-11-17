@@ -277,7 +277,7 @@ final class CommandRouter {
         if (t.matches("(turn on |enable |start |use )?(the )?ad ?block(er|ing)?( on)?|block (the )?ads|stop (the )?ads|no ads")) {
             return b.tool("adblock", "on");
         }
-        if (t.matches("(switch to |use |turn on |change to )?(the )?midnight( glass)?( look| theme| mode| style)?")) {
+        if (t.matches("(switch to |use |turn on |change to )?(the )?(midnight|neon|space)( glass)?( look| theme| mode| style)?")) {
             return b.tool("look", "midnight");
         }
         if (t.matches("(switch to |use |turn on |change to |back to )?(the )?teal( glass)?( look| theme| mode| style)?")) {

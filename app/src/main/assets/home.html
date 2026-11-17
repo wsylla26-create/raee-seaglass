@@ -73,28 +73,45 @@ h2{margin:0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:va
 .ring b{width:66px;height:66px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800}
 .center{text-align:center}
 .mini .duo,.mini .wx{display:none}
-/* Midnight Glass: dark glass with a blue glow */
-body.midnight{--teal:#0A2236;--ink:#E8F5FF;--ink-soft:#9FD3F5;--accent:#4FC3FF;--glass:rgba(27,78,122,.22);--glass-strong:rgba(79,195,255,.12);--edge:rgba(140,210,255,.42);
-  background:radial-gradient(ellipse at 15% 0%,#16507A 0%,#0A2740 45%,#061524 100%);min-height:100vh}
-html.midnight{background:#061524}
+/* Neon Glass: deep space, glowing electric-blue glass cards linked by energy lines */
+body.midnight{--teal:#050C24;--ink:#EAF6FF;--ink-soft:#8EC5F5;--accent:#4FB4FF;--glass:rgba(8,20,52,.72);--glass-strong:rgba(79,180,255,.12);--edge:#4FB4FF;
+  background:radial-gradient(ellipse at 20% -10%,#163A8C 0%,#0A1A4A 35%,#050C24 70%,#02050F 100%) fixed;min-height:100vh}
+html.midnight{background:#02050F}
 html.midnight.mini{background:transparent}
 body.midnight.mini{background:transparent}
-.midnight .panel{background:linear-gradient(160deg,rgba(120,200,255,.16),rgba(30,80,130,.10) 45%,rgba(10,30,55,.18));border:1px solid var(--edge);box-shadow:0 0 18px rgba(79,195,255,.18),inset 0 1px 0 rgba(255,255,255,.14)}
-.midnight .clock{text-shadow:0 0 22px rgba(79,195,255,.55)}
-.midnight .brand b{color:#7FD8FF}
-.midnight h2{color:#BFE6FF;letter-spacing:.14em}
-.midnight .chip{border-color:rgba(140,210,255,.38)}
-.midnight .chip:active{background:rgba(79,195,255,.3)}
-.midnight .tile{background:rgba(79,195,255,.07)}
-.midnight .tile b{box-shadow:0 0 14px var(--c,rgba(79,195,255,.5))}
-.midnight .tile i{background:#4FC3FF;color:#06233A}
-.midnight .list a{border-color:rgba(140,210,255,.15)}
-.midnight .ring{background:conic-gradient(var(--accent) calc(var(--p)*1%),rgba(140,210,255,.16) 0)}
-.midnight .ring b{background:#0B2A44}
-.midnight .brand a{border-color:rgba(159,211,245,.4)}
+#space{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none}
+.midnight:not(.mini) #space{display:block}
+.midnight .wrap{position:relative;z-index:1;gap:22px}
+.midnight .panel{background:linear-gradient(160deg,rgba(40,90,190,.20),rgba(8,20,52,.78) 40%,rgba(5,12,36,.86));
+  border:1.5px solid #4FB4FF;border-radius:20px;
+  box-shadow:0 0 0 1px rgba(79,180,255,.25),0 0 16px rgba(46,139,255,.55),0 0 34px rgba(46,139,255,.22),inset 0 0 18px rgba(79,180,255,.14);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.midnight .clock{color:#F2FAFF;text-shadow:0 0 18px rgba(79,180,255,.85),0 0 40px rgba(46,139,255,.45)}
+.midnight .brand b{color:#9FDCFF;text-shadow:0 0 10px rgba(79,180,255,.8)}
+.midnight h2{color:#F2FAFF;font-size:14px;letter-spacing:.12em;text-shadow:0 0 8px rgba(79,180,255,.9)}
+.midnight .hint{color:#8EC5F5}
+.midnight .chip{background:rgba(79,180,255,.08);border-color:rgba(79,180,255,.55);box-shadow:inset 0 0 10px rgba(79,180,255,.12)}
+.midnight .chip:active{background:rgba(79,180,255,.32)}
+.midnight .edit{background:rgba(79,180,255,.1);border-color:rgba(79,180,255,.6)}
+.midnight .tile{background:rgba(79,180,255,.06);border:1px solid rgba(79,180,255,.18)}
+.midnight .tile b{box-shadow:0 0 14px rgba(79,180,255,.55),inset 0 0 0 1px rgba(255,255,255,.25)}
+.midnight .tile i{background:#4FB4FF;color:#04102A}
+.midnight .list a{border-color:rgba(79,180,255,.18)}
+.midnight .ring{background:conic-gradient(#4FB4FF calc(var(--p)*1%),rgba(79,180,255,.14) 0);box-shadow:0 0 18px rgba(46,139,255,.5)}
+.midnight .ring b{background:#06122E;color:#F2FAFF}
+.midnight .brand a{border-color:rgba(142,197,245,.4)}
+/* Voice controls card (Neon Glass only) */
+.voice{display:none}
+.midnight:not(.mini) .voice{display:flex;cursor:pointer}
+.voice canvas{width:100%;height:84px;display:block}
+.vfoot{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700}
+.vfoot .st{color:#8EC5F5}
+.vfoot .st:before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid #8EC5F5;margin-right:8px;vertical-align:-1px}
+.vfoot .ok{color:#4DF59A;text-shadow:0 0 10px rgba(77,245,154,.7)}
 </style>
 </head>
 <body>
+<canvas id="space" aria-hidden="true"></canvas>
 <div class="wrap">
   <div>
     <div class="brand"><b>RAEE SeaGlass</b><a href="https://raee-industries.me">raee-industries.me</a></div>
@@ -104,6 +121,11 @@ body.midnight.mini{background:transparent}
     </div>
     <div class="hello" id="hello">Tap the mic and tell me where to go.</div>
   </div>
+  <section class="panel voice" id="voice" role="button" aria-label="Voice controls. Tap to talk.">
+    <h2>Voice controls</h2>
+    <canvas id="wave" aria-hidden="true"></canvas>
+    <div class="vfoot"><span class="st">Tap to talk</span><span class="ok">Ready ✓</span></div>
+  </section>
   <section class="panel">
     <h2>Try saying</h2>
     <div class="chips" id="chips"></div>
@@ -288,6 +310,90 @@ body.midnight.mini{background:transparent}
   });
   // Show new shortcuts when coming back to this page.
   window.addEventListener('pageshow', function () { if (!editing) render(); });
+})();
+</script>
+<script>
+/* Neon Glass: twinkling stars, flowing energy lines between the cards, and the voice waveform. */
+(function () {
+  if (!document.body.classList.contains('midnight') || document.body.classList.contains('mini')) return;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var sc = document.getElementById('space'), sx = sc.getContext('2d');
+  var wc = document.getElementById('wave'), wx = wc.getContext('2d');
+  var dpr = Math.min(2, window.devicePixelRatio || 1), W = 0, H = 0, stars = [];
+  function size() {
+    W = innerWidth; H = innerHeight;
+    sc.width = W * dpr; sc.height = H * dpr; sx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    stars = [];
+    var n = Math.round(W * H / 2600);
+    for (var i = 0; i < n; i++) stars.push({x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.3 + .3, p: Math.random() * 6.28, s: .5 + Math.random() * 1.5});
+    var r = wc.getBoundingClientRect();
+    wc.width = r.width * dpr; wc.height = r.height * dpr; wx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  size(); addEventListener('resize', size);
+  document.getElementById('voice').addEventListener('click', function () {
+    if (window.SeaGlass && window.SeaGlass.listen) window.SeaGlass.listen();
+  });
+  function glowPath(ctx, draw, colors, widths) {
+    for (var k = 0; k < colors.length; k++) {
+      ctx.beginPath(); draw(); ctx.strokeStyle = colors[k]; ctx.lineWidth = widths[k]; ctx.stroke();
+    }
+  }
+  function frame(now) {
+    var t = now / 1000;
+    sx.clearRect(0, 0, W, H);
+    // stars
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i], a = .35 + .65 * Math.abs(Math.sin(s.p + t * s.s));
+      sx.fillStyle = 'rgba(200,230,255,' + a.toFixed(2) + ')';
+      sx.beginPath(); sx.arc(s.x, s.y, s.r, 0, 6.283); sx.fill();
+    }
+    // flowing energy lines linking the cards (out of each card's right edge, down into the next)
+    var cards = document.querySelectorAll('.midnight .panel');
+    sx.lineCap = 'round';
+    for (var c = 0; c + 1 < cards.length; c++) {
+      var a1 = cards[c].getBoundingClientRect(), b1 = cards[c + 1].getBoundingClientRect();
+      if (a1.bottom < -50 || b1.top > H + 50) continue;
+      var x1 = a1.right, y1 = a1.top + a1.height * .55, x2 = b1.right, y2 = b1.top + b1.height * .45;
+      var out = Math.min(W - 4, Math.max(x1, x2) + 14);
+      var wob = Math.sin(t * 1.4 + c) * 4;
+      var path = function () { sx.moveTo(x1, y1); sx.bezierCurveTo(out + wob, y1, out - wob, y2, x2, y2); };
+      glowPath(sx, path, ['rgba(46,139,255,.16)', 'rgba(59,232,255,.38)', 'rgba(170,240,255,.95)'], [9, 4, 1.4]);
+      // spark travelling along the line
+      var u = ((t * .45 + c * .3) % 1), v = 1 - u;
+      var px = v*v*v*x1 + 3*v*v*u*(out+wob) + 3*v*u*u*(out-wob) + u*u*u*x2;
+      var py = v*v*v*y1 + 3*v*v*u*y1 + 3*v*u*u*y2 + u*u*u*y2;
+      sx.fillStyle = 'rgba(59,232,255,.35)'; sx.beginPath(); sx.arc(px, py, 6, 0, 6.283); sx.fill();
+      sx.fillStyle = '#EFFFFF'; sx.beginPath(); sx.arc(px, py, 2.2, 0, 6.283); sx.fill();
+    }
+    // a long sweeping aurora line across the lower screen, like the design
+    var path2 = function () {
+      sx.moveTo(-20, H * .78);
+      for (var x = 0; x <= W + 20; x += 12) sx.lineTo(x, H * .78 + Math.sin(x / 90 + t * .8) * 22 + Math.sin(x / 37 - t * 1.3) * 6);
+    };
+    glowPath(sx, path2, ['rgba(46,139,255,.10)', 'rgba(59,232,255,.22)', 'rgba(140,230,255,.55)'], [14, 5, 1.2]);
+    // waveform in the voice card
+    var ww = wc.width / dpr, wh = wc.height / dpr, mid = wh / 2;
+    wx.clearRect(0, 0, ww, wh);
+    wx.strokeStyle = 'rgba(79,180,255,.45)'; wx.lineWidth = 1; wx.beginPath(); wx.moveTo(0, mid); wx.lineTo(ww, mid); wx.stroke();
+    var lobes = [['rgba(59,232,255,', 3.0, 1.3, .55], ['rgba(79,180,255,', 2.2, -.9, .78], ['rgba(183,140,255,', 1.6, .6, 1]];
+    for (var k = 0; k < 3; k++) {
+      var L = lobes[k];
+      var draw = function (sign) {
+        for (var i = 0; i <= 80; i++) {
+          var uu = i / 80, env = Math.pow(Math.sin(Math.PI * uu), 1.6);
+          var y = Math.sin(uu * Math.PI * 2 * L[1] + t * L[2] * 3) * env * wh * .44 * L[3] * .8;
+          var X = uu * ww, Y = mid - sign * y;
+          if (i === 0) wx.moveTo(X, Y); else wx.lineTo(X, Y);
+        }
+      };
+      wx.beginPath(); draw(1); for (var j = 80; j >= 0; j--) { var uu2 = j / 80, e2 = Math.pow(Math.sin(Math.PI * uu2), 1.6), y2b = Math.sin(uu2 * Math.PI * 2 * L[1] + t * L[2] * 3) * e2 * wh * .44 * L[3] * .8; wx.lineTo(uu2 * ww, mid + y2b); }
+      wx.closePath(); wx.fillStyle = L[0] + '.16)'; wx.fill();
+      wx.strokeStyle = L[0] + '.35)'; wx.lineWidth = 4; wx.stroke();
+      wx.strokeStyle = L[0] + '1)'; wx.lineWidth = 1.3; wx.stroke();
+    }
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 })();
 </script>
 </body>

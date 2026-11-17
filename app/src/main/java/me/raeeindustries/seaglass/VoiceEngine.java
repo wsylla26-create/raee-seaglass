@@ -25,6 +25,8 @@ final class VoiceEngine {
     private int utteranceCount;
     private final Handler main = new Handler(Looper.getMainLooper());
     private volatile String lastUtterance = "";
+    /** Latest mic loudness (about -2 to 10 dB), used by the Neon Glass waveform. */
+    static volatile float level = 0f;
 
     interface Listener {
         void onHeard(String str);
@@ -260,6 +262,7 @@ final class VoiceEngine {
 
         @Override
         public void onRmsChanged(float rmsdB) {
+            level = rmsdB;
         }
 
         @Override
